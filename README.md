@@ -59,24 +59,19 @@ EXTRAPE_RATE_LIMIT_SECONDS=1.0
 
 > **Security:** Never commit `.env` to git or share it.
 
-### 4. Generate a string session (first run)
+### 4. Generate a string session
 
-The first time you run the bot without `TELEGRAM_STRING_SESSION` set, it will:
+You must provide a valid `TELEGRAM_STRING_SESSION` for the bot to run in non-interactive environments (Railway, Docker, VPS, etc.).
 
-- Prompt you for your phone number.
-- Send you a Telegram login code.
-- Ask you to enter that code.
-- Save a reusable **string session** to `.session.txt`.
-
-You can then copy the session string into `.env` (`TELEGRAM_STRING_SESSION=`) for non-interactive deployments (VPS, Docker, etc.).
-
-Run:
+We include a helper script to create one locally:
 
 ```bash
-python main.py
+python gen_session.py
 ```
 
-Follow the prompts. Once logged in, stop the script and update `.env` with the printed session (if desired).
+The script will ask you to log in with your phone number and will then print the session string. Copy that value and set it in your `.env` (or in the Railway variables) under `TELEGRAM_STRING_SESSION`.
+
+> **Important:** The bot will **not** prompt interactively at runtime. It will fail immediately if the session is missing or invalid.
 
 ### 5. Run the bot
 
