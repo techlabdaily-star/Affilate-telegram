@@ -1,0 +1,4 @@
+.env
+deals.db
+__pycache__/
+.venv/
