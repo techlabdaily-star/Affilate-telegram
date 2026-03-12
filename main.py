@@ -36,14 +36,11 @@ async def _create_client(settings: Settings) -> TelegramClient:
     await client.connect()
 
     if not await client.is_user_authorized():
-        print("You are not logged in. Starting interactive login flow.")
-        phone = input("Enter your phone number (with country code): ")
-        await client.send_code_request(phone)
-        code = input("Enter the code you received: ")
-        await client.sign_in(phone=phone, code=code)
-        print("Logged in successfully.")
-        print("Your string session (store securely, do NOT share):")
-        print(StringSession.save(client.session))
+        # cannot perform interactive login in a headless environment like Railway
+        if settings.string_session:
+            raise RuntimeError("Provided TELEGRAM_STRING_SESSION is invalid or expired; set a valid one in environment variables.")
+        else:
+            raise RuntimeError("Missing TELEGRAM_STRING_SESSION. Generate one locally and add it to Railway variables.")
 
     return client
 
