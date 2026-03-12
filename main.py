@@ -150,11 +150,9 @@ async def main() -> None:
 
         try:
             if msg.media:
-                # Forward with image: download media then repost with rewritten caption
-                media_file = await msg.download_media()
                 await client.send_file(
                     settings.target_channel,
-                    media_file,
+                    msg.media,
                     caption=final_text,
                     link_preview=True,
                 )
