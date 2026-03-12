@@ -175,27 +175,6 @@ async def main() -> None:
         except Exception as exc:  # noqa: BLE001
             print(f"Failed to post deal: {exc}")
 
-    async def giveaway_loop() -> None:
-        if not settings.giveaway_enabled:
-            return
-        # Simple periodic giveaway poster
-        while True:
-            text = settings.giveaway_text or (
-                "🎁 GIVEAWAY\n\n"
-                "Win ₹500 Amazon Gift Card\n\n"
-                "Steps:\n"
-                "1️⃣ Join @TechLabDeals\n"
-                "2️⃣ Share this post with 3 friends\n"
-                "3️⃣ Stay active\n\n"
-                "Winner announced tomorrow!"
-            )
-            try:
-                await client.send_message(settings.target_channel, text)
-                print("Posted scheduled giveaway message.")
-            except Exception as exc:  # noqa: BLE001
-                print(f"Failed to post giveaway message: {exc}")
-            await asyncio.sleep(settings.giveaway_interval_minutes * 60)
-
     async def repost_loop() -> None:
         if not settings.repost_enabled:
             return
@@ -216,7 +195,6 @@ async def main() -> None:
     # Run until Ctrl+C
     try:
         # launch background tasks
-        asyncio.create_task(giveaway_loop())
         asyncio.create_task(repost_loop())
         await client.run_until_disconnected()
     finally:

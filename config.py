@@ -31,9 +31,6 @@ class Settings:
     extrape_username: str
     extrape_rate_limit_seconds: float
     trending_min_sources: int
-    giveaway_enabled: bool
-    giveaway_interval_minutes: int
-    giveaway_text: str | None
     repost_enabled: bool
     repost_after_hours: int
     repost_trending_only: bool
@@ -69,14 +66,6 @@ def load_settings() -> Settings:
     except ValueError:
         trending_min_sources = 3
 
-    giveaway_enabled = os.getenv("GIVEAWAY_ENABLED", "false").lower() == "true"
-    giveaway_interval_raw = os.getenv("GIVEAWAY_INTERVAL_MINUTES", "720")  # default 12h
-    try:
-        giveaway_interval_minutes = int(giveaway_interval_raw)
-    except ValueError:
-        giveaway_interval_minutes = 720
-    giveaway_text = os.getenv("GIVEAWAY_TEXT") or None
-
     repost_enabled = os.getenv("REPOST_ENABLED", "false").lower() == "true"
     repost_after_hours_raw = os.getenv("REPOST_AFTER_HOURS", "8")
     try:
@@ -94,9 +83,6 @@ def load_settings() -> Settings:
         extrape_username=extrape_username,
         extrape_rate_limit_seconds=rate_limit,
         trending_min_sources=trending_min_sources,
-        giveaway_enabled=giveaway_enabled,
-        giveaway_interval_minutes=giveaway_interval_minutes,
-        giveaway_text=giveaway_text,
         repost_enabled=repost_enabled,
         repost_after_hours=repost_after_hours,
         repost_trending_only=repost_trending_only,
