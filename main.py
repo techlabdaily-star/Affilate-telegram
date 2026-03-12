@@ -17,8 +17,13 @@ from link_extractor import extract_urls, filter_supported
 
 
 async def _create_client(settings: Settings) -> TelegramClient:
+    # Telethon StringSession will raise ValueError if the provided string is invalid
     if settings.string_session:
-        session = StringSession(settings.string_session)
+        try:
+            session = StringSession(settings.string_session)
+        except ValueError:
+            print("Warning: TELEGRAM_STRING_SESSION is invalid, falling back to temporary session")
+            session = StringSession()
     else:
         # Use a temporary in-memory session; user can later copy the string session
         session = StringSession()
