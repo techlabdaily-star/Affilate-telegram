@@ -22,72 +22,40 @@ import requests
 
 
 def rewrite_text(original_text: str, tone: str = "professional", grok_api_key: str | None = None) -> str:
-    """Rewrite input text using Grok API if key provided, else Pollinations.
+    """Rewrite input text using Pollinations (Grok integration disabled due to API issues).
 
     Args:
         original_text: The text to rewrite.
         tone: A single-word description of how the text should sound.
-        grok_api_key: Optional Grok API key for enhanced rewriting.
+        grok_api_key: Ignored for now.
 
     Returns:
         The rewritten text (or an error string on failure).
     """
 
-    if grok_api_key:
-        # Use Grok API
-        url = "https://api.x.ai/v1/chat/completions"
-        system_prompt = (
-            "You are a helpful assistant. Rewrite the user's text to be "
-            f"{tone}, clear, and grammatically correct. Only return the rewritten text."
-        )
+    # Use Pollinations (free and working)
+    url = "https://text.pollinations.ai"
+    system_prompt = (
+        "You are a helpful assistant. Rewrite the user's text to be "
+        f"{tone}, clear, and grammatically correct. Only return the rewritten text."
+    )
 
-        payload = {
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": original_text},
-            ],
-            "model": "grok-beta",
-            "stream": False,
-            "temperature": 0.7,
-        }
+    payload = {
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": original_text},
+        ],
+        "model": "openai",  # alternatives: "mistral", "llama"
+        "jsonMode": False,
+    }
 
-        headers = {
-            "Authorization": f"Bearer {grok_api_key}",
-            "Content-Type": "application/json",
-        }
-
-        try:
-            response = requests.post(url, json=payload, headers=headers, timeout=15)
-            if response.status_code == 200:
-                data = response.json()
-                return data["choices"][0]["message"]["content"].strip()
-            return f"Error: {response.status_code} - {response.text}"
-        except Exception as e:
-            return f"Request failed: {e}"
-    else:
-        # Fallback to Pollinations
-        url = "https://text.pollinations.ai"
-        system_prompt = (
-            "You are a helpful assistant. Rewrite the user's text to be "
-            f"{tone}, clear, and grammatically correct. Only return the rewritten text."
-        )
-
-        payload = {
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": original_text},
-            ],
-            "model": "openai",  # alternatives: "mistral", "llama"
-            "jsonMode": False,
-        }
-
-        try:
-            response = requests.post(url, json=payload, timeout=15)
-            if response.status_code == 200:
-                return response.text
-            return f"Error: {response.status_code}"
-        except Exception as e:
-            return f"Request failed: {e}"
+    try:
+        response = requests.post(url, json=payload, timeout=15)
+        if response.status_code == 200:
+            return response.text
+        return f"Error: {response.status_code}"
+    except Exception as e:
+        return f"Request failed: {e}"
 
 
 def generate_image(

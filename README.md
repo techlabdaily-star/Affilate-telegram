@@ -60,6 +60,10 @@ TARGET_CHANNEL=@YourChannel
 # Set to "true" to enable.
 FORWARD_ORIGINAL=false
 
+# Optional: rewrite incoming deal text using Pollinations (free AI text rewrite)
+POLLINATIONS_REWRITE=false
+POLLINATIONS_TONE=professional
+
 # Optional: how many seconds to wait between messages to ExtraPe
 EXTRAPE_RATE_LIMIT_SECONDS=1.0
 ```
@@ -102,6 +106,21 @@ The bot will:
 - **Message template:** Edit `formatter.py` if you want to change the way deals are formatted.
 - **Supported domains:** Edit `SUPPORTED_DOMAINS` in `link_extractor.py` to add/remove e-commerce sites.
 - **Rate limiting:** Adjust `EXTRAPE_RATE_LIMIT_SECONDS` in `.env` to be more conservative if you hit limits with `@ExtraPeBot`.
+
+## Optional: Pollinations helpers (text rewrite + image generation)
+
+This repo includes a small helper module for Pollinations' free, no-key APIs:
+
+- `pollinations.rewrite_text(...)` (used by the bot when `POLLINATIONS_REWRITE=true`)
+- `pollinations.generate_image(...)` (create images from text prompts)
+
+### CLI usage
+
+```bash
+python -m pollinations rewrite --tone academic "write a short tweet about coding"
+
+python -m pollinations image "a futuristic city skyline" --save-dir ./imgs --width 1024 --height 1024
+```
 
 ## Production / 24x7 Running
 

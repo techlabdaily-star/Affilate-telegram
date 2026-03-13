@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import requests
+import logging
 from typing import Optional
 
 from telethon import TelegramClient, events
@@ -17,6 +17,10 @@ from formatter import build_deal_message
 from link_extractor import extract_and_expand_urls, filter_supported
 from pollinations import rewrite_text
 
+# Set up logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 
 async def _create_client(settings: Settings) -> TelegramClient:
     # Telethon StringSession will raise ValueError if the provided string is invalid
@@ -24,7 +28,7 @@ async def _create_client(settings: Settings) -> TelegramClient:
         try:
             session = StringSession(settings.string_session)
         except ValueError:
-            print("Warning: TELEGRAM_STRING_SESSION is invalid, falling back to temporary session")
+            logger.warning("Warning: TELEGRAM_STRING_SESSION is invalid, falling back to temporary session")
             session = StringSession()
     else:
         # Use a temporary in-memory session; user can later copy the string session
@@ -102,20 +106,20 @@ async def main() -> None:
         rate_limit_seconds=settings.extrape_rate_limit_seconds,
     )
 
-    print("Listening for new deal messages...")
+    logger.info("Listening for new deal messages...")
 
     @client.on(events.NewMessage(chats=resolved_source_channels))
     async def handler(event: events.NewMessage.Event) -> None:
         msg: Message = event.message
-        print(f"New message in chat {msg.chat_id} with id {msg.id}")
+        logger.info(f"New message in chat {msg.chat_id} with id {msg.id}")
 
         if await dedupe.has_processed(msg.chat_id, msg.id):
-            print("Message already processed, skipping.")
+            logger.info("Message already processed, skipping.")
             return
 
-        original_text = msg.message or ""
-        if not looks_like_deal(original_text):
-            print("Message does not look like a deal, skipping.")
+        text = msg.message or ""
+        if not looks_like_deal(text):
+            logger.info("Message does not look like a deal, skipping.")
             return
 
         # Optionally rewrite incoming deal text for clarity/consistency using Pollinations.
@@ -127,9 +131,9 @@ async def main() -> None:
                 if rewritten and not rewritten.startswith("Error:") and not rewritten.startswith("Request failed:"):
                     text = rewritten
                 else:
-                    print(f"Text rewrite failed; using original text: {rewritten}")
+                    logger.warning(f"Text rewrite failed; using original text: {rewritten}")
             except Exception as exc:  # noqa: BLE001
-                print(f"Text rewrite error: {exc}")
+                logger.error(f"Text rewrite error: {exc}")
 
         lower_text = text.lower()
         is_flash = any(
@@ -143,23 +147,23 @@ async def main() -> None:
         # Use original text for URL extraction so rewriting does not remove/alter links.
         urls = extract_and_expand_urls(original_text)
         if not urls:
-            print("No URLs found in message, skipping.")
+            logger.info("No URLs found in message, skipping.")
             return
 
         # If you want only the first link, uncomment the next two lines:
         # urls = [urls[0]] if urls else []
 
-        print(f"Expanded URLs: {urls}")
+        logger.debug(f"Expanded URLs: {urls}")
 
         try:
             url_map = await affiliate_client.convert_links(urls)
         except Exception as exc:  # noqa: BLE001
             # In production you might want structured logging here
-            print(f"Error converting links via ExtraPe: {exc}")
+            logger.error(f"Error converting links via ExtraPe: {exc}")
             return
 
         if not url_map:
-            print("ExtraPe did not return any affiliate URLs, skipping.")
+            logger.warning("ExtraPe did not return any affiliate URLs, skipping.")
             return
 
         # For simplicity, only use the first affiliate link
@@ -171,7 +175,7 @@ async def main() -> None:
         stats = await dedupe.get_link_stats(original_url)
         is_trending = stats["source_count"] >= settings.trending_min_sources
         if is_trending:
-            print(
+            logger.info(
                 f"Link {original_url} is trending: "
                 f"seen {stats['seen_count']} times across {stats['source_count']} sources.",
             )
@@ -197,7 +201,7 @@ async def main() -> None:
                     else:
                         reply_to_msg_id = forwarded.id if forwarded else None
                 except Exception as exc:  # noqa: BLE001
-                    print(f"Failed to forward original message: {exc}")
+                    logger.error(f"Failed to forward original message: {exc}")
 
                 await client.send_message(
                     resolved_target_channel,
@@ -229,11 +233,11 @@ async def main() -> None:
                     message_text=final_text,
                     hours_from_now=settings.repost_after_hours,
                 )
-            print(
+            logger.info(
                 f"Posted deal from chat {msg.chat_id} message {msg.id} to {settings.target_channel}",
             )
         except Exception as exc:  # noqa: BLE001
-            print(f"Failed to post deal: {exc}")
+            logger.error(f"Failed to post deal: {exc}")
 
     async def repost_loop() -> None:
         if not settings.repost_enabled:
@@ -245,11 +249,11 @@ async def main() -> None:
                     try:
                         await client.send_message(resolved_target_channel, message_text, link_preview=True, parse_mode='md')
                         await dedupe.mark_repost_sent(repost_id)
-                        print(f"Reposted deal for {affiliate_url} from repost queue.")
+                        logger.info(f"Reposted deal for {affiliate_url} from repost queue.")
                     except Exception as exc:  # noqa: BLE001
-                        print(f"Failed to repost deal {affiliate_url}: {exc}")
+                        logger.error(f"Failed to repost deal {affiliate_url}: {exc}")
             except Exception as exc:  # noqa: BLE001
-                print(f"Error while processing repost queue: {exc}")
+                logger.error(f"Error while processing repost queue: {exc}")
             await asyncio.sleep(300)  # check every 5 minutes
 
     # Run until Ctrl+C
