@@ -81,6 +81,20 @@ async def main() -> None:
 
     client = await _create_client(settings)
 
+    async def _resolve_chat_id(chat: str | int) -> str | int:
+        """Resolve a username/handle to a numeric chat id (falls back to input on failure)."""
+        try:
+            entity = await client.get_entity(chat)
+            return entity.id
+        except Exception:
+            return chat
+
+    # Use numeric IDs to avoid username changes breaking the listener.
+    resolved_source_channels = [
+        await _resolve_chat_id(ch) for ch in settings.source_channels
+    ]
+    resolved_target_channel = await _resolve_chat_id(settings.target_channel)
+
     affiliate_client = AffiliateClient(
         client=client,
         extrape_username=settings.extrape_username,
@@ -89,7 +103,7 @@ async def main() -> None:
 
     print("Listening for new deal messages...")
 
-    @client.on(events.NewMessage(chats=settings.source_channels))
+    @client.on(events.NewMessage(chats=resolved_source_channels))
     async def handler(event: events.NewMessage.Event) -> None:
         msg: Message = event.message
         print(f"New message in chat {msg.chat_id} with id {msg.id}")
@@ -159,15 +173,37 @@ async def main() -> None:
         )
 
         try:
-            if msg.media:
-                await client.send_file(
-                    settings.target_channel,
-                    msg.media,
-                    caption=final_text,
+            reply_to_msg_id = None
+            if settings.forward_original:
+                try:
+                    forwarded = await client.forward_messages(resolved_target_channel, msg)
+                    if isinstance(forwarded, list):
+                        reply_to_msg_id = forwarded[0].id if forwarded else None
+                    else:
+                        reply_to_msg_id = forwarded.id if forwarded else None
+                except Exception as exc:  # noqa: BLE001
+                    print(f"Failed to forward original message: {exc}")
+
+            if settings.forward_original:
+                # When forwarding the original deal message, just send our affiliate-focused
+                # deal message as a follow-up message (optionally replying to the forwarded message).
+                await client.send_message(
+                    resolved_target_channel,
+                    final_text,
                     link_preview=True,
+                    reply_to=reply_to_msg_id,
                 )
             else:
-                await client.send_message(settings.target_channel, final_text, link_preview=True)
+                if msg.media:
+                    await client.send_file(
+                        resolved_target_channel,
+                        msg.media,
+                        caption=final_text,
+                        link_preview=True,
+                    )
+                else:
+                    await client.send_message(resolved_target_channel, final_text, link_preview=True)
+
             await dedupe.mark_processed(msg.chat_id, msg.id, affiliate_url=affiliate_url)
 
             # Schedule reposts for extra exposure if enabled
@@ -193,7 +229,7 @@ async def main() -> None:
                 due = await dedupe.get_due_reposts()
                 for repost_id, affiliate_url, message_text in due:
                     try:
-                        await client.send_message(settings.target_channel, message_text, link_preview=True)
+                        await client.send_message(resolved_target_channel, message_text, link_preview=True)
                         await dedupe.mark_repost_sent(repost_id)
                         print(f"Reposted deal for {affiliate_url} from repost queue.")
                     except Exception as exc:  # noqa: BLE001

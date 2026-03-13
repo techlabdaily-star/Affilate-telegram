@@ -34,6 +34,7 @@ class Settings:
     repost_enabled: bool
     repost_after_hours: int
     repost_trending_only: bool
+    forward_original: bool
     db_path: str = "deals.db"
 
 
@@ -74,6 +75,8 @@ def load_settings() -> Settings:
         repost_after_hours = 8
     repost_trending_only = os.getenv("REPOST_TRENDING_ONLY", "true").lower() == "true"
 
+    forward_original = os.getenv("FORWARD_ORIGINAL", "false").lower() == "true"
+
     return Settings(
         api_id=api_id,
         api_hash=api_hash,
@@ -86,5 +89,6 @@ def load_settings() -> Settings:
         repost_enabled=repost_enabled,
         repost_after_hours=repost_after_hours,
         repost_trending_only=repost_trending_only,
+        forward_original=forward_original,
     )
 

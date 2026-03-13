@@ -47,11 +47,18 @@ TELEGRAM_API_HASH=your_api_hash_here
 # The first run of main.py can generate this for you interactively.
 TELEGRAM_STRING_SESSION=
 
-# Comma-separated list of source channels (usernames or numeric IDs)
+# Comma-separated list of source channels (usernames or numeric IDs).
+# The bot will resolve @usernames to numeric IDs at runtime so the bot
+# keeps working even if a channel changes its @username.
 SOURCE_CHANNELS=@TechFactsDeals,@iamprasadtech,@ExtraPe
 
 # Your target channel username or ID (e.g. @YourChannel)
 TARGET_CHANNEL=@YourChannel
+
+# Optional: forward the original source message (text + media) to the target channel
+# before sending the formatted affiliate deal message.
+# Set to "true" to enable.
+FORWARD_ORIGINAL=false
 
 # Optional: how many seconds to wait between messages to ExtraPe
 EXTRAPE_RATE_LIMIT_SECONDS=1.0
