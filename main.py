@@ -13,7 +13,7 @@ from config import Settings, load_settings
 from dedupe_store import DedupeStore
 from filters import looks_like_deal
 from formatter import build_deal_message
-from link_extractor import extract_urls, filter_supported
+from link_extractor import extract_and_expand_urls, filter_supported
 
 
 async def _create_client(settings: Settings) -> TelegramClient:
@@ -98,22 +98,17 @@ async def main() -> None:
         )
         category_label = detect_category(text)
 
-        all_urls = extract_urls(text)
-        if not all_urls:
+
+        # Extract and expand all URLs (follows redirects for short links)
+        urls = extract_and_expand_urls(text)
+        if not urls:
             print("No URLs found in message, skipping.")
             return
 
-        urls = filter_supported(all_urls)
-        if urls:
-            print(f"Found supported URLs: {urls}")
-        else:
-            # Fall back to sending all URLs to ExtraPe; it will ignore unsupported ones.
-            urls = all_urls
-            print(f"No supported domains matched. Falling back to all URLs: {urls}")
+        # If you want only the first link, uncomment the next two lines:
+        # urls = [urls[0]] if urls else []
 
-        if not urls:
-            print("No URLs to send after filtering, skipping.")
-            return
+        print(f"Expanded URLs: {urls}")
 
         try:
             url_map = await affiliate_client.convert_links(urls)
