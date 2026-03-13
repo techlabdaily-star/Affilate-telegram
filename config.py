@@ -35,6 +35,9 @@ class Settings:
     repost_after_hours: int
     repost_trending_only: bool
     forward_original: bool
+    use_pollinations_rewrite: bool
+    pollinations_tone: str
+    grok_api_key: str | None
     db_path: str = "deals.db"
 
 
@@ -77,6 +80,11 @@ def load_settings() -> Settings:
 
     forward_original = os.getenv("FORWARD_ORIGINAL", "false").lower() == "true"
 
+    use_pollinations_rewrite = os.getenv("POLLINATIONS_REWRITE", "false").lower() == "true"
+    pollinations_tone = os.getenv("POLLINATIONS_TONE", "professional")
+
+    grok_api_key = os.getenv("GROK_API_KEY") or None
+
     return Settings(
         api_id=api_id,
         api_hash=api_hash,
@@ -90,5 +98,8 @@ def load_settings() -> Settings:
         repost_after_hours=repost_after_hours,
         repost_trending_only=repost_trending_only,
         forward_original=forward_original,
+        use_pollinations_rewrite=use_pollinations_rewrite,
+        pollinations_tone=pollinations_tone,
+        grok_api_key=grok_api_key,
     )
 

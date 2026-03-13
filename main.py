@@ -122,14 +122,14 @@ async def main() -> None:
         text = original_text
         if settings.use_pollinations_rewrite:
             try:
-                rewritten = rewrite_text(original_text, tone=settings.pollinations_tone)
+                rewritten = rewrite_text(original_text, tone=settings.pollinations_tone, grok_api_key=settings.grok_api_key)
                 # Pollinations returns a short error string on failure.
                 if rewritten and not rewritten.startswith("Error:") and not rewritten.startswith("Request failed:"):
                     text = rewritten
                 else:
-                    print(f"Pollinations rewrite failed; using original text: {rewritten}")
+                    print(f"Text rewrite failed; using original text: {rewritten}")
             except Exception as exc:  # noqa: BLE001
-                print(f"Pollinations rewrite error: {exc}")
+                print(f"Text rewrite error: {exc}")
 
         lower_text = text.lower()
         is_flash = any(
