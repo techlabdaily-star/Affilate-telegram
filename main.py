@@ -15,6 +15,7 @@ from dedupe_store import DedupeStore
 from filters import looks_like_deal
 from formatter import build_deal_message
 from link_extractor import extract_and_expand_urls, filter_supported
+from pollinations import rewrite_text
 
 
 async def _create_client(settings: Settings) -> TelegramClient:
@@ -112,10 +113,23 @@ async def main() -> None:
             print("Message already processed, skipping.")
             return
 
-        text = msg.message or ""
-        if not looks_like_deal(text):
+        original_text = msg.message or ""
+        if not looks_like_deal(original_text):
             print("Message does not look like a deal, skipping.")
             return
+
+        # Optionally rewrite incoming deal text for clarity/consistency using Pollinations.
+        text = original_text
+        if settings.use_pollinations_rewrite:
+            try:
+                rewritten = rewrite_text(original_text, tone=settings.pollinations_tone)
+                # Pollinations returns a short error string on failure.
+                if rewritten and not rewritten.startswith("Error:") and not rewritten.startswith("Request failed:"):
+                    text = rewritten
+                else:
+                    print(f"Pollinations rewrite failed; using original text: {rewritten}")
+            except Exception as exc:  # noqa: BLE001
+                print(f"Pollinations rewrite error: {exc}")
 
         lower_text = text.lower()
         is_flash = any(
@@ -126,7 +140,8 @@ async def main() -> None:
 
 
         # Extract and expand all URLs (follows redirects for short links)
-        urls = extract_and_expand_urls(text)
+        # Use original text for URL extraction so rewriting does not remove/alter links.
+        urls = extract_and_expand_urls(original_text)
         if not urls:
             print("No URLs found in message, skipping.")
             return
@@ -184,14 +199,12 @@ async def main() -> None:
                 except Exception as exc:  # noqa: BLE001
                     print(f"Failed to forward original message: {exc}")
 
-            if settings.forward_original:
-                # When forwarding the original deal message, just send our affiliate-focused
-                # deal message as a follow-up message (optionally replying to the forwarded message).
                 await client.send_message(
                     resolved_target_channel,
                     final_text,
                     link_preview=True,
                     reply_to=reply_to_msg_id,
+                    parse_mode='md',
                 )
             else:
                 if msg.media:
@@ -200,9 +213,10 @@ async def main() -> None:
                         msg.media,
                         caption=final_text,
                         link_preview=True,
+                        parse_mode='md',
                     )
                 else:
-                    await client.send_message(resolved_target_channel, final_text, link_preview=True)
+                    await client.send_message(resolved_target_channel, final_text, link_preview=True, parse_mode='md')
 
             await dedupe.mark_processed(msg.chat_id, msg.id, affiliate_url=affiliate_url)
 
@@ -229,7 +243,7 @@ async def main() -> None:
                 due = await dedupe.get_due_reposts()
                 for repost_id, affiliate_url, message_text in due:
                     try:
-                        await client.send_message(resolved_target_channel, message_text, link_preview=True)
+                        await client.send_message(resolved_target_channel, message_text, link_preview=True, parse_mode='md')
                         await dedupe.mark_repost_sent(repost_id)
                         print(f"Reposted deal for {affiliate_url} from repost queue.")
                     except Exception as exc:  # noqa: BLE001

@@ -26,9 +26,9 @@ def build_deal_message(
     category_label: str | None = None,
 ) -> str:
     """
-    Build the final deal message to post.
+    Build the final deal message to post, using Markdown for better formatting.
 
-    - Tries to keep useful original context.
+    - Uses bold for titles, prices, and key elements for visual alignment.
     - Extracts a price if present.
     """
     price = extract_price(original_text)
@@ -37,27 +37,28 @@ def build_deal_message(
 
     lines: list[str] = []
     if is_flash:
-        lines.append("⚡ FLASH DEAL")
+        lines.append("⚡ **FLASH DEAL**")
     elif is_trending:
-        lines.append("🚀 VIRAL DEAL")
+        lines.append("🚀 **VIRAL DEAL**")
     else:
-        lines.append("🔥 HOT DEAL")
+        lines.append("🔥 **HOT DEAL**")
     lines.append("")
     if category_label:
-        lines.append(f"{category_label}")
-        lines.append(title.strip())
+        lines.append(f"📂 **{category_label}**")
+        lines.append(f"**{title.strip()}**")
     else:
-        lines.append(title.strip())
+        lines.append(f"**{title.strip()}**")
 
     if price:
         lines.append("")
-        lines.append(f"💰 Price: {price}")
+        lines.append(f"💰 **Price:** {price}")
 
     lines.append("")
-    lines.append("🛒 Buy Now")
+    lines.append("🛒 **Buy Now**")
     lines.append(affiliate_url.strip())
     lines.append("")
-    lines.append(f"📢 Join: {channel_mention}")
+    lines.append(f"📢 **Join:** {channel_mention}")
 
     return "\n".join(lines)
+
 
