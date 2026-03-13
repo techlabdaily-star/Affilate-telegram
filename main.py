@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import requests
 from typing import Optional
 
 from telethon import TelegramClient, events
@@ -60,6 +61,17 @@ def _guess_product_name(message: Message) -> Optional[str]:
             continue
         return line
     return None
+
+
+def shorten_url(url: str) -> str:
+    try:
+        response = requests.get(f"http://tinyurl.com/api-create.php?url={url}", timeout=5)
+        if response.status_code == 200:
+            return response.text.strip()
+        else:
+            return url
+    except Exception:
+        return url
 
 
 async def main() -> None:
@@ -123,6 +135,7 @@ async def main() -> None:
 
         # For simplicity, only use the first affiliate link
         original_url, affiliate_url = next(iter(url_map.items()))
+        affiliate_url = shorten_url(affiliate_url)
 
         # Record link observation for basic trending detection
         await dedupe.record_link_seen(msg.chat_id, msg.id, original_url)
