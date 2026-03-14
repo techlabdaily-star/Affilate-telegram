@@ -21,6 +21,9 @@ class AppConfig:
     session_name: str
     db_path: str
     chats_output_file: str
+    source_chat_id: int | None
+    destination_chat_id: int | None
+    default_keywords: str | None
     forward_media: bool
     forward_only_with_links: bool
     include_category_hint: bool
@@ -83,6 +86,12 @@ def load_config() -> AppConfig:
     session_name = os.getenv("TELEGRAM_SESSION_NAME", f"session_{phone_number}")
     db_path = os.getenv("DEDUPE_DB_PATH", "forwarder.db")
     chats_output_file = os.getenv("CHATS_OUTPUT_FILE", f"chats_of_{phone_number}.txt")
+    source_chat_id_raw = (os.getenv("SOURCE_CHAT_ID") or "").strip()
+    destination_chat_id_raw = (os.getenv("DESTINATION_CHAT_ID") or "").strip()
+    default_keywords = os.getenv("FORWARD_KEYWORDS")
+
+    source_chat_id = int(source_chat_id_raw) if source_chat_id_raw else None
+    destination_chat_id = int(destination_chat_id_raw) if destination_chat_id_raw else None
 
     return AppConfig(
         api_id=api_id,
@@ -92,6 +101,9 @@ def load_config() -> AppConfig:
         session_name=session_name,
         db_path=db_path,
         chats_output_file=chats_output_file,
+        source_chat_id=source_chat_id,
+        destination_chat_id=destination_chat_id,
+        default_keywords=default_keywords,
         forward_media=_as_bool(os.getenv("FORWARD_MEDIA"), default=True),
         forward_only_with_links=_as_bool(os.getenv("FORWARD_ONLY_WITH_LINKS"), default=False),
         include_category_hint=_as_bool(os.getenv("INCLUDE_CATEGORY_HINT"), default=False),

@@ -15,6 +15,11 @@ from filters import message_matches, parse_keywords
 from formatter import build_forward_text
 from link_extractor import has_urls
 
+# Optional hardcoded fallbacks (ID format, e.g. -1001234567890).
+# Prefer environment variables SOURCE_CHAT_ID and DESTINATION_CHAT_ID.
+DEFAULT_SOURCE_CHAT_ID: int | None = None
+DEFAULT_DESTINATION_CHAT_ID: int | None = None
+
 
 async def ensure_authorized(client: TelegramClient, phone_number: str) -> None:
     await client.connect()
@@ -69,15 +74,37 @@ async def run_forwarder(cfg: AppConfig, args: argparse.Namespace) -> None:
     client = create_client(cfg)
     await ensure_authorized(client, cfg.phone_number)
 
-    source_chat_id = args.source_chat_id
-    destination_chat_id = args.destination_chat_id
+    source_chat_id = (
+        args.source_chat_id
+        if args.source_chat_id is not None
+        else (cfg.source_chat_id if cfg.source_chat_id is not None else DEFAULT_SOURCE_CHAT_ID)
+    )
+    destination_chat_id = (
+        args.destination_chat_id
+        if args.destination_chat_id is not None
+        else (
+            cfg.destination_chat_id
+            if cfg.destination_chat_id is not None
+            else DEFAULT_DESTINATION_CHAT_ID
+        )
+    )
 
     if source_chat_id is None:
+        if not sys.stdin.isatty():
+            raise RuntimeError(
+                "SOURCE_CHAT_ID is required in non-interactive mode. "
+                "Set SOURCE_CHAT_ID in environment variables or pass --source-chat-id."
+            )
         source_chat_id = int(input("Enter source chat ID: ").strip())
     if destination_chat_id is None:
+        if not sys.stdin.isatty():
+            raise RuntimeError(
+                "DESTINATION_CHAT_ID is required in non-interactive mode. "
+                "Set DESTINATION_CHAT_ID in environment variables or pass --destination-chat-id."
+            )
         destination_chat_id = int(input("Enter destination chat ID: ").strip())
 
-    raw_keywords = args.keywords
+    raw_keywords = args.keywords if args.keywords is not None else cfg.default_keywords
     if raw_keywords is None:
         raw_keywords = input("Keywords (comma-separated, blank = forward all): ").strip()
     keywords = parse_keywords(raw_keywords)
