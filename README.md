@@ -1,77 +1,121 @@
-# Telegram Forwarder Project
+# Telegram Autoforwarder
 
-A clean Telegram forwarder using Telethon.
+This project forwards Telegram deals from one or more source chats into a destination chat or bot, then reformats them into cleaner posts before sending.
 
-## Main File
+## Current Features
 
-Use main.py as the main code for this project.
-
-## Features
-
-- Forward new messages from a source chat/channel to a destination chat/channel
-- Filter forwarding by keywords
-- Optional media forwarding
-- Optional link-only forwarding
-- Optional category hint prefix
-- Dedupe protection using SQLite
-- Chat listing utility
+- Multi-source forwarding to one destination.
+- Smart deal formatting for text posts and media captions.
+- Amazon affiliate tag rewriting from `.env`.
+- Store-aware labels for Amazon, Flipkart, Myntra, Ajio, Meesho, Nykaa, Tata Cliq, and Snapdeal.
+- Duplicate-deal blocking with a configurable TTL.
+- Optional strict mode to skip stickers, polls, and service messages.
+- Optional blocked-keyword filtering.
+- Optional minimum discount filtering.
+- Background service scripts for start, stop, and status.
 
 ## Setup
 
-1. Install requirements:
+1. Create a virtual environment and install dependencies:
 
-```bash
-pip install -r requirements.txt
+   ```bash
+   python3 -m venv .venv
+   ./.venv/bin/python -m pip install -r requirements.txt
+   ```
+
+2. Run the script once interactively to create credentials and Telegram session files:
+
+   ```bash
+   ./.venv/bin/python TelegramForwarder.py
+   ```
+
+3. Configure `.env` with your affiliate and forwarding defaults.
+
+## Important `.env` Settings
+
+```env
+AFFILIATE_AMAZON_TAG=bypineapple-21
+AFFILIATE_GENERIC_TEMPLATE=
+SEEN_DEAL_TTL_HOURS=24
+BLOCKED_KEYWORDS=expired,out of stock,sold out
+FORWARDER_LOG_FILE=forwarder.log
+MIN_DISCOUNT_PERCENT=0
+AUTO_START_FORWARDING=true
+DEFAULT_SOURCE_CHAT_IDS=-1001422047391,-1001412868909,-1001670336143,-1001389782464
+DEFAULT_DESTINATION_TARGET=2015117555
+DEFAULT_KEYWORDS=
+DEFAULT_STRICT_MODE=true
 ```
 
-2. Save credentials:
+## Run Modes
+
+### Interactive mode
 
 ```bash
-python setup.py
+./.venv/bin/python TelegramForwarder.py
 ```
 
-3. List chats to get IDs:
+### Background mode
 
 ```bash
-python main.py --list-chats
+./start_forwarder.sh
 ```
 
-4. Start forwarding:
+Stop it with:
 
 ```bash
-python main.py
+./stop_forwarder.sh
 ```
 
-For production (Railway/VPS/Docker), set `TELEGRAM_STRING_SESSION` so login does not require interactive OTP input.
-Also set `SOURCE_CHAT_IDS` and `DESTINATION_CHAT_ID` to avoid interactive prompts.
-
-## CLI Options
+Check status with:
 
 ```bash
-python main.py --help
+./status_forwarder.sh
 ```
 
-Useful options:
+Watch logs with:
 
-- --list-chats
-- --source-chat-id <id>
-- --destination-chat-id <id>
-- --keywords "deal,offer,discount"
-- --once
+```bash
+tail -f forwarder.log
+```
 
-## Environment Variables
+## Preview Formatter
 
-You can use .env with:
+You can preview how a raw deal will be cleaned and rewritten before sending it live.
 
-- TELEGRAM_API_ID
-- TELEGRAM_API_HASH
-- TELEGRAM_PHONE_NUMBER
-- TELEGRAM_STRING_SESSION (recommended for production)
-- TELEGRAM_SESSION_NAME (optional)
-- DEDUPE_DB_PATH (optional)
-- SOURCE_CHAT_IDS (required in non-interactive deployments, comma-separated IDs)
-- DESTINATION_CHAT_ID (required in non-interactive deployments)
-- FORWARD_KEYWORDS (optional; if omitted, all messages are forwarded)
-- FORWARD_MEDIA=true|false (optional)
-- FORWARD_ONLY_WITH_LINKS=true|false (optional)
-- INCLUDE_CATEGORY_HINT=true|false (optional)
+Paste from stdin:
+
+```bash
+printf "Boat Watch\nMRP Rs 2999\nPrice Rs 1499\nhttps://www.amazon.in/dp/B0TEST1234\n" | ./.venv/bin/python preview_deal.py
+```
+
+Or pass a text file:
+
+```bash
+./.venv/bin/python preview_deal.py sample_deal.txt
+```
+
+## How Posting Works
+
+1. The bot reads incoming message text and media captions.
+2. It extracts the first link and rewrites Amazon links with your affiliate tag.
+3. It detects product name, prices, coupon codes, bank offers, and store.
+4. It formats the deal into a cleaner post.
+5. It skips duplicates, blocked keywords, and optionally low-discount deals.
+6. It sends the result to the configured destination.
+
+## Project Files
+
+- `TelegramForwarder.py`: main runtime and forwarding loop.
+- `smart_formatter.py`: deal cleanup and formatting logic.
+- `affiliate_links.py`: link rewriting logic.
+- `deal_cache.py`: duplicate-deal cache.
+- `start_forwarder.sh`: start background service.
+- `stop_forwarder.sh`: stop background service.
+- `status_forwarder.sh`: check current service status.
+
+## Notes
+
+- Keep `.env`, `credentials.txt`, and `.session` files private.
+- Open the destination bot or chat at least once in Telegram if entity resolution fails.
+- Leave `AFFILIATE_GENERIC_TEMPLATE` empty unless you have a real generic tracking service.

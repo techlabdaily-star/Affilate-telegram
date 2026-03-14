@@ -1,10 +1,26 @@
+# Session files
+*.session*
+
+# Credentials
+credentials.txt
+config.ini
+config.py
 .env
-deals.db
-forwarder.db
-.venv/
+
+# Runtime files
+forwarder.log
+forwarder.pid
+seen_deals.json
+chats_of_*.txt
+
+# Cache files
 __pycache__/
 *.pyc
-credentials.txt
-session_*.session
-session_*.session-journal
-chats_of_*.txt
+
+# IDE-specific files
+.vscode/
+.idea/
+
+# System-specific files
+.DS_Store
+Thumbs.db
