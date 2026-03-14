@@ -43,7 +43,7 @@ python main.py
 ```
 
 For production (Railway/VPS/Docker), set `TELEGRAM_STRING_SESSION` so login does not require interactive OTP input.
-Also set `SOURCE_CHAT_ID` and `DESTINATION_CHAT_ID` to avoid interactive prompts.
+Also set `SOURCE_CHAT_IDS` and `DESTINATION_CHAT_ID` to avoid interactive prompts.
 
 ## CLI Options
 
@@ -69,9 +69,9 @@ You can use .env with:
 - TELEGRAM_STRING_SESSION (recommended for production)
 - TELEGRAM_SESSION_NAME (optional)
 - DEDUPE_DB_PATH (optional)
-- SOURCE_CHAT_ID (required in non-interactive deployments)
+- SOURCE_CHAT_IDS (required in non-interactive deployments, comma-separated IDs)
 - DESTINATION_CHAT_ID (required in non-interactive deployments)
-- FORWARD_KEYWORDS (optional default keywords)
+- FORWARD_KEYWORDS (optional; if omitted, all messages are forwarded)
 - FORWARD_MEDIA=true|false (optional)
 - FORWARD_ONLY_WITH_LINKS=true|false (optional)
 - INCLUDE_CATEGORY_HINT=true|false (optional)

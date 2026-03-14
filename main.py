@@ -105,7 +105,10 @@ async def run_forwarder(cfg: AppConfig, args: argparse.Namespace) -> None:
 
     raw_keywords = args.keywords if args.keywords is not None else cfg.default_keywords
     if raw_keywords is None:
-        raw_keywords = input("Keywords (comma-separated, blank = forward all): ").strip()
+        if sys.stdin.isatty():
+            raw_keywords = input("Keywords (comma-separated, blank = forward all): ").strip()
+        else:
+            raw_keywords = ""
     keywords = parse_keywords(raw_keywords)
 
     dedupe = DedupeStore(cfg.db_path)
