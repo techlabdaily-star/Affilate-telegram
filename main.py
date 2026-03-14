@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import asyncio
 import logging
 from typing import Optional
@@ -51,6 +52,29 @@ async def _create_client(settings: Settings) -> TelegramClient:
     return client
 
 
+async def list_chats(client: TelegramClient) -> None:
+    """List all chats the client has access to. Useful for setup and debugging."""
+    logger.info("Getting list of all chats...")
+
+    try:
+        dialogs = await client.get_dialogs()
+
+        # Save to file for reference
+        with open("chats_list.txt", "w", encoding="utf-8") as chats_file:
+            chats_file.write("Chat ID | Title | Type | Username\n")
+            chats_file.write("-" * 60 + "\n")
+
+            for dialog in dialogs:
+                chat_type = "Channel" if dialog.is_channel else ("Group" if dialog.is_group else "Private")
+                username = f"@{dialog.entity.username}" if hasattr(dialog.entity, 'username') and dialog.entity.username else ""
+                print(f"ID: {dialog.id}, Title: {dialog.title}, Type: {chat_type}, Username: {username}")
+                chats_file.write(f"{dialog.id} | {dialog.title} | {chat_type} | {username}\n")
+
+        logger.info(f"List of {len(dialogs)} chats saved to 'chats_list.txt'")
+    except Exception as exc:
+        logger.error(f"Failed to list chats: {exc}")
+
+
 def _guess_product_name(message: Message) -> Optional[str]:
     text = (message.message or "").strip()
     if not text:
@@ -80,11 +104,21 @@ def shorten_url(url: str) -> str:
 
 
 async def main() -> None:
+    parser = argparse.ArgumentParser(description="Telegram Affiliate Deal Bot")
+    parser.add_argument("--list-chats", action="store_true", help="List all available chats and exit")
+    args = parser.parse_args()
+
     settings = load_settings()
     dedupe = DedupeStore(settings.db_path)
     await dedupe.init()
 
     client = await _create_client(settings)
+
+    # If --list-chats is specified, just list chats and exit
+    if args.list_chats:
+        await list_chats(client)
+        await client.disconnect()
+        return
 
     async def _resolve_chat_id(chat: str | int) -> str | int:
         """Resolve a username/handle to a numeric chat id (falls back to input on failure)."""

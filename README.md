@@ -24,13 +24,45 @@ Automates collecting deal messages from selected Telegram channels, converts pro
 
 ## Setup
 
-### 1. Install dependencies
+### 1. Quick Setup (Recommended)
+
+Use the interactive setup script:
 
 ```bash
-pip install -r requirements.txt
+python setup.py
 ```
 
-The bot uses async operations for better performance when processing multiple URLs in deal messages.
+This will:
+- Guide you through credential setup
+- Generate your session string
+- Save credentials for future use
+- Provide next steps
+
+### 2. Manual Setup
+
+If you prefer manual setup, follow these steps:
+
+#### Create credentials.txt
+
+Create a `credentials.txt` file with your Telegram API credentials:
+
+```
+YOUR_API_ID
+YOUR_API_HASH
+YOUR_PHONE_NUMBER
+```
+
+#### Generate Session String
+
+```bash
+python gen_session.py
+```
+
+Or to list all your chats:
+
+```bash
+python gen_session.py --list-chats
+```
 
 ### 2. Create a Telegram API app
 
@@ -96,6 +128,10 @@ The script will ask you to log in with your phone number and will then print the
 ```bash
 python main.py
 ```
+
+**Useful commands:**
+- `python main.py --list-chats` - List all chats you have access to
+- `python main.py` - Start the bot normally
 
 The bot will:
 
