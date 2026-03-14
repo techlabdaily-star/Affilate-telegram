@@ -3,8 +3,10 @@ from __future__ import annotations
 import argparse
 import asyncio
 from pathlib import Path
+import sys
 
 from telethon import TelegramClient, errors, events
+from telethon.sessions import StringSession
 
 from categories import detect_category
 from config import AppConfig, load_config, save_credentials_file
@@ -19,6 +21,12 @@ async def ensure_authorized(client: TelegramClient, phone_number: str) -> None:
     if await client.is_user_authorized():
         return
 
+    if not sys.stdin.isatty():
+        raise RuntimeError(
+            "Telegram session is not authorized in non-interactive mode. "
+            "Set a valid TELEGRAM_STRING_SESSION for production deployments."
+        )
+
     await client.send_code_request(phone_number)
     try:
         code = input("Enter the Telegram verification code: ").strip()
@@ -26,6 +34,19 @@ async def ensure_authorized(client: TelegramClient, phone_number: str) -> None:
     except errors.rpcerrorlist.SessionPasswordNeededError:
         password = input("Two-step verification enabled. Enter password: ").strip()
         await client.sign_in(password=password)
+
+
+def create_client(cfg: AppConfig) -> TelegramClient:
+    if cfg.string_session:
+        try:
+            session = StringSession(cfg.string_session)
+        except Exception as exc:
+            raise RuntimeError(
+                "Provided TELEGRAM_STRING_SESSION is invalid. Generate a fresh one using gen_session.py"
+            ) from exc
+        return TelegramClient(session, cfg.api_id, cfg.api_hash)
+
+    return TelegramClient(cfg.session_name, cfg.api_id, cfg.api_hash)
 
 
 async def list_chats(client: TelegramClient, output_file: str) -> None:
@@ -45,7 +66,7 @@ async def list_chats(client: TelegramClient, output_file: str) -> None:
 
 
 async def run_forwarder(cfg: AppConfig, args: argparse.Namespace) -> None:
-    client = TelegramClient(cfg.session_name, cfg.api_id, cfg.api_hash)
+    client = create_client(cfg)
     await ensure_authorized(client, cfg.phone_number)
 
     source_chat_id = args.source_chat_id
@@ -121,7 +142,7 @@ async def main() -> None:
 
     save_credentials_file(cfg.api_id, cfg.api_hash, cfg.phone_number)
 
-    client = TelegramClient(cfg.session_name, cfg.api_id, cfg.api_hash)
+    client = create_client(cfg)
     await ensure_authorized(client, cfg.phone_number)
 
     if args.list_chats:

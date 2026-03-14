@@ -17,6 +17,7 @@ class AppConfig:
     api_id: int
     api_hash: str
     phone_number: str
+    string_session: str | None
     session_name: str
     db_path: str
     chats_output_file: str
@@ -78,6 +79,7 @@ def _read_or_prompt_credentials() -> tuple[int, str, str]:
 def load_config() -> AppConfig:
     api_id, api_hash, phone_number = _read_or_prompt_credentials()
 
+    string_session = os.getenv("TELEGRAM_STRING_SESSION") or None
     session_name = os.getenv("TELEGRAM_SESSION_NAME", f"session_{phone_number}")
     db_path = os.getenv("DEDUPE_DB_PATH", "forwarder.db")
     chats_output_file = os.getenv("CHATS_OUTPUT_FILE", f"chats_of_{phone_number}.txt")
@@ -86,6 +88,7 @@ def load_config() -> AppConfig:
         api_id=api_id,
         api_hash=api_hash,
         phone_number=phone_number,
+        string_session=string_session,
         session_name=session_name,
         db_path=db_path,
         chats_output_file=chats_output_file,

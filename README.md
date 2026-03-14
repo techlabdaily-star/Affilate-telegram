@@ -42,6 +42,8 @@ python main.py --list-chats
 python main.py
 ```
 
+For production (Railway/VPS/Docker), set `TELEGRAM_STRING_SESSION` so login does not require interactive OTP input.
+
 ## CLI Options
 
 ```bash
@@ -63,6 +65,7 @@ You can use .env with:
 - TELEGRAM_API_ID
 - TELEGRAM_API_HASH
 - TELEGRAM_PHONE_NUMBER
+- TELEGRAM_STRING_SESSION (recommended for production)
 - TELEGRAM_SESSION_NAME (optional)
 - DEDUPE_DB_PATH (optional)
 - FORWARD_MEDIA=true|false (optional)
