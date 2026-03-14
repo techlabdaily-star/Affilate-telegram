@@ -145,7 +145,7 @@ async def main() -> None:
 
         # Extract and expand all URLs (follows redirects for short links)
         # Use original text for URL extraction so rewriting does not remove/alter links.
-        urls = extract_and_expand_urls(original_text)
+        urls = await extract_and_expand_urls(original_text)
         if not urls:
             logger.info("No URLs found in message, skipping.")
             return

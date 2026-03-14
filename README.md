@@ -5,17 +5,22 @@ Automates collecting deal messages from selected Telegram channels, converts pro
 ## Features
 
 - **Monitor source channels** for new deal messages.
-- **Extract product links** for Flipkart, Myntra, Ajio, Amazon, and more.
+- **Extract and expand product links** asynchronously for Flipkart, Myntra, Ajio, Amazon, and more.
 - **Send links to `@ExtraPeBot`** and capture converted affiliate links.
-- **Format deals** into a consistent template.
+- **Format deals** into a consistent Markdown template.
+- **AI-powered text rewriting** using Pollinations API for clearer deal descriptions.
+- **Forward original messages** (text + images) when enabled.
 - **Post to your target channel** automatically.
-- **Avoid duplicates** using a small SQLite database.
+- **Avoid duplicates** using a SQLite database.
+- **Repost trending deals** after configurable hours.
 
 ## Tech Stack
 
-- Python
-- [Telethon](https://github.com/LonamiWebs/Telethon)
+- Python (asyncio for concurrent operations)
+- [Telethon](https://github.com/LonamiWebs/Telethon) for Telegram API
+- [aiohttp](https://docs.aiohttp.org/) for async URL expansion
 - SQLite (for deduplication)
+- Pollinations API (for AI text rewriting)
 
 ## Setup
 
@@ -24,6 +29,8 @@ Automates collecting deal messages from selected Telegram channels, converts pro
 ```bash
 pip install -r requirements.txt
 ```
+
+The bot uses async operations for better performance when processing multiple URLs in deal messages.
 
 ### 2. Create a Telegram API app
 
@@ -95,10 +102,12 @@ The bot will:
 1. Connect to Telegram.
 2. Start listening for new messages in `SOURCE_CHANNELS`.
 3. For each new message:
-   - Extract supported product links.
-   - Send them to `@ExtraPeBot`.
+   - Extract and asynchronously expand supported product links.
+   - Send them to `@ExtraPeBot` for affiliate conversion.
    - Receive affiliate links.
-   - Build a formatted deal.
+   - Optionally rewrite text using AI for clarity.
+   - Optionally forward original message (text + media).
+   - Build a formatted Markdown deal message.
    - Post it to `TARGET_CHANNEL`, skipping duplicates.
 
 ## Customization
