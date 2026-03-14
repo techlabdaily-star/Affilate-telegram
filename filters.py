@@ -1,26 +1,17 @@
 from __future__ import annotations
 
-from typing import Iterable
+from typing import Iterable, List
 
 
-DEFAULT_KEYWORDS = (
-    "₹",
-    "rs",
-    "deal",
-    "offer",
-    "% off",
-)
+def parse_keywords(raw: str | None) -> List[str]:
+    if not raw:
+        return []
+    return [k.strip().lower() for k in raw.split(",") if k.strip()]
 
 
-def _normalize(text: str) -> str:
-    return text.lower()
-
-
-def looks_like_deal(text: str, keywords: Iterable[str] = DEFAULT_KEYWORDS) -> bool:
-    """Heuristic check to see if a message is likely to be a deal."""
-    if not text:
-        return False
-
-    normalized = _normalize(text)
-    return any(kw in normalized for kw in keywords)
-
+def message_matches(text: str, keywords: Iterable[str]) -> bool:
+    normalized = (text or "").lower()
+    kws = [k for k in keywords if k]
+    if not kws:
+        return True
+    return any(k in normalized for k in kws)

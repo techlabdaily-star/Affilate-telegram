@@ -1,5 +1,10 @@
 .env
 deals.db
+forwarder.db
 .venv/
 __pycache__/
 *.pyc
+credentials.txt
+session_*.session
+session_*.session-journal
+chats_of_*.txt

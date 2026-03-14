@@ -2,71 +2,21 @@ from __future__ import annotations
 
 from typing import Optional
 
-
-CATEGORY_KEYWORDS = {
-    "📱 Mobile Deals": (
-        "mobile",
-        "smartphone",
-        "iphone",
-        "android",
-        "realme",
-        "redmi",
-        "samsung",
-        "oneplus",
-    ),
-    "💻 Laptop Deals": (
-        "laptop",
-        "notebook",
-        "macbook",
-        "gaming laptop",
-    ),
-    "🎧 Electronics": (
-        "earbuds",
-        "headphone",
-        "headset",
-        "tws",
-        "bluetooth",
-        "speaker",
-        "soundbar",
-        "tv",
-        "smartwatch",
-    ),
-    "👕 Fashion": (
-        "t-shirt",
-        "shirt",
-        "jeans",
-        "kurta",
-        "saree",
-        "dress",
-        "shoes",
-        "sneakers",
-        "heels",
-        "hoodie",
-    ),
-    "🏠 Home & Kitchen": (
-        "kitchen",
-        "mixer",
-        "grinder",
-        "cooker",
-        "cookware",
-        "bedsheet",
-        "pillow",
-        "mattress",
-        "sofa",
-        "chair",
-        "table",
-        "lamp",
-    ),
+CATEGORY_KEYWORDS: dict[str, tuple[str, ...]] = {
+    "mobile": ("iphone", "samsung", "realme", "redmi", "oneplus", "mobile", "smartphone"),
+    "laptop": ("laptop", "notebook", "macbook"),
+    "fashion": ("shirt", "t-shirt", "jeans", "saree", "dress", "shoes"),
+    "electronics": ("earbuds", "headphone", "speaker", "tv", "smartwatch"),
+    "home": ("kitchen", "cooker", "cookware", "mixer", "mattress", "sofa"),
 }
 
 
 def detect_category(text: str) -> Optional[str]:
-    if not text:
+    normalized = (text or "").lower()
+    if not normalized:
         return None
 
-    lower = text.lower()
     for label, keywords in CATEGORY_KEYWORDS.items():
-        if any(k in lower for k in keywords):
+        if any(kw in normalized for kw in keywords):
             return label
     return None
-
