@@ -10,6 +10,19 @@ from telethon.sync import TelegramClient
 load_dotenv()
 
 
+def log_env_presence():
+    checks = {
+        "API_ID": bool(os.getenv("API_ID", "").strip()),
+        "API_HASH": bool(os.getenv("API_HASH", "").strip()),
+        "PHONE_NUMBER": bool(os.getenv("PHONE_NUMBER", "").strip()),
+        "SOURCE_CHAT_IDS": bool(os.getenv("SOURCE_CHAT_IDS", "").strip() or os.getenv("DEFAULT_SOURCE_CHAT_IDS", "").strip()),
+        "DESTINATION_TARGET": bool(os.getenv("DESTINATION_TARGET", "").strip() or os.getenv("DEFAULT_DESTINATION_TARGET", "").strip()),
+        "TELEGRAM_SESSION_STRING": bool(os.getenv("TELEGRAM_SESSION_STRING", "").strip()),
+    }
+    formatted = ", ".join(f"{name}={'yes' if present else 'no'}" for name, present in checks.items())
+    print(f"Environment check: {formatted}")
+
+
 class TelegramForwarder:
     def __init__(self, api_id, api_hash, phone_number):
         self.api_id = api_id
@@ -145,6 +158,7 @@ def write_credentials(api_id, api_hash, phone_number):
 
 
 async def main():
+    log_env_presence()
     api_id, api_hash, phone_number = read_credentials()
 
     if api_id is None or api_hash is None or phone_number is None:
