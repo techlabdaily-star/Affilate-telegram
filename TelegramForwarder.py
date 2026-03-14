@@ -23,6 +23,15 @@ def log_env_presence():
     print(f"Environment check: {formatted}")
 
 
+def clean_env_value(value):
+    if value is None:
+        return None
+    cleaned = value.strip()
+    if len(cleaned) >= 2 and cleaned[0] == cleaned[-1] and cleaned[0] in ('"', "'"):
+        cleaned = cleaned[1:-1].strip()
+    return cleaned
+
+
 class TelegramForwarder:
     def __init__(self, api_id, api_hash, phone_number):
         self.api_id = api_id
@@ -117,10 +126,10 @@ class TelegramForwarder:
 
 
 def read_credentials():
-    env_api_id = os.getenv("API_ID")
-    env_api_hash = os.getenv("API_HASH")
-    env_phone_number = os.getenv("PHONE_NUMBER")
-    has_string_session = bool(os.getenv("TELEGRAM_SESSION_STRING", "").strip())
+    env_api_id = clean_env_value(os.getenv("API_ID"))
+    env_api_hash = clean_env_value(os.getenv("API_HASH"))
+    env_phone_number = clean_env_value(os.getenv("PHONE_NUMBER"))
+    has_string_session = bool(clean_env_value(os.getenv("TELEGRAM_SESSION_STRING", "")))
     if env_api_id and env_api_hash and (env_phone_number or has_string_session):
         return env_api_id, env_api_hash, env_phone_number
 
@@ -160,9 +169,10 @@ def write_credentials(api_id, api_hash, phone_number):
 async def main():
     log_env_presence()
     api_id, api_hash, phone_number = read_credentials()
+    has_string_session = bool(clean_env_value(os.getenv("TELEGRAM_SESSION_STRING", "")))
 
-    if api_id is None or api_hash is None or phone_number is None:
-        has_string_session = bool(os.getenv("TELEGRAM_SESSION_STRING", "").strip())
+    # PHONE_NUMBER is optional when using TELEGRAM_SESSION_STRING.
+    if api_id is None or api_hash is None or (phone_number is None and not has_string_session):
         if not sys.stdin.isatty():
             raise RuntimeError(
                 "Missing credentials. Set API_ID and API_HASH. "
@@ -176,6 +186,9 @@ async def main():
         else:
             phone_number = input("Enter your phone number: ")
             write_credentials(api_id, api_hash, phone_number)
+
+    if phone_number is None:
+        phone_number = ""
 
     forwarder = TelegramForwarder(api_id, api_hash, phone_number)
 
