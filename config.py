@@ -21,6 +21,7 @@ class AppConfig:
     session_name: str
     db_path: str
     chats_output_file: str
+    source_chat_ids: list[int]
     source_chat_id: int | None
     destination_chat_id: int | None
     default_keywords: str | None
@@ -86,12 +87,17 @@ def load_config() -> AppConfig:
     session_name = os.getenv("TELEGRAM_SESSION_NAME", f"session_{phone_number}")
     db_path = os.getenv("DEDUPE_DB_PATH", "forwarder.db")
     chats_output_file = os.getenv("CHATS_OUTPUT_FILE", f"chats_of_{phone_number}.txt")
+    source_chat_ids_raw = (os.getenv("SOURCE_CHAT_IDS") or "").strip()
     source_chat_id_raw = (os.getenv("SOURCE_CHAT_ID") or "").strip()
     destination_chat_id_raw = (os.getenv("DESTINATION_CHAT_ID") or "").strip()
     default_keywords = os.getenv("FORWARD_KEYWORDS")
 
+    source_chat_ids = [int(value.strip()) for value in source_chat_ids_raw.split(",") if value.strip()]
     source_chat_id = int(source_chat_id_raw) if source_chat_id_raw else None
     destination_chat_id = int(destination_chat_id_raw) if destination_chat_id_raw else None
+
+    if source_chat_id is not None and not source_chat_ids:
+        source_chat_ids = [source_chat_id]
 
     return AppConfig(
         api_id=api_id,
@@ -101,6 +107,7 @@ def load_config() -> AppConfig:
         session_name=session_name,
         db_path=db_path,
         chats_output_file=chats_output_file,
+        source_chat_ids=source_chat_ids,
         source_chat_id=source_chat_id,
         destination_chat_id=destination_chat_id,
         default_keywords=default_keywords,

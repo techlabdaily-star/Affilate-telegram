@@ -16,8 +16,8 @@ from formatter import build_forward_text
 from link_extractor import has_urls
 
 # Optional hardcoded fallbacks (ID format, e.g. -1001234567890).
-# Prefer environment variables SOURCE_CHAT_ID and DESTINATION_CHAT_ID.
-DEFAULT_SOURCE_CHAT_ID: int | None = None
+# Prefer environment variables SOURCE_CHAT_IDS / DESTINATION_CHAT_ID.
+DEFAULT_SOURCE_CHAT_IDS: list[int] = []
 DEFAULT_DESTINATION_CHAT_ID: int | None = None
 
 
@@ -74,11 +74,10 @@ async def run_forwarder(cfg: AppConfig, args: argparse.Namespace) -> None:
     client = create_client(cfg)
     await ensure_authorized(client, cfg.phone_number)
 
-    source_chat_id = (
-        args.source_chat_id
-        if args.source_chat_id is not None
-        else (cfg.source_chat_id if cfg.source_chat_id is not None else DEFAULT_SOURCE_CHAT_ID)
-    )
+    source_chat_ids = [args.source_chat_id] if args.source_chat_id is not None else list(cfg.source_chat_ids)
+    if not source_chat_ids and DEFAULT_SOURCE_CHAT_IDS:
+        source_chat_ids = list(DEFAULT_SOURCE_CHAT_IDS)
+
     destination_chat_id = (
         args.destination_chat_id
         if args.destination_chat_id is not None
@@ -89,13 +88,13 @@ async def run_forwarder(cfg: AppConfig, args: argparse.Namespace) -> None:
         )
     )
 
-    if source_chat_id is None:
+    if not source_chat_ids:
         if not sys.stdin.isatty():
             raise RuntimeError(
-                "SOURCE_CHAT_ID is required in non-interactive mode. "
-                "Set SOURCE_CHAT_ID in environment variables or pass --source-chat-id."
+                "SOURCE_CHAT_IDS is required in non-interactive mode. "
+                "Set SOURCE_CHAT_IDS in environment variables or pass --source-chat-id."
             )
-        source_chat_id = int(input("Enter source chat ID: ").strip())
+        source_chat_ids = [int(input("Enter source chat ID: ").strip())]
     if destination_chat_id is None:
         if not sys.stdin.isatty():
             raise RuntimeError(
@@ -113,19 +112,20 @@ async def run_forwarder(cfg: AppConfig, args: argparse.Namespace) -> None:
     await dedupe.init()
 
     print("Forwarder started")
-    print(f"Source: {source_chat_id}")
+    print(f"Sources: {source_chat_ids}")
     print(f"Destination: {destination_chat_id}")
     print(f"Keywords: {keywords if keywords else '[ALL MESSAGES]'}")
 
-    @client.on(events.NewMessage(chats=source_chat_id))
+    @client.on(events.NewMessage(chats=source_chat_ids))
     async def handle_new_message(event: events.NewMessage.Event) -> None:
         message = event.message
         text = message.message or ""
+        event_source_chat_id = int(event.chat_id) if event.chat_id is not None else 0
 
         if not text and not (cfg.forward_media and message.media):
             return
 
-        if await dedupe.has_processed(source_chat_id, message.id):
+        if await dedupe.has_processed(event_source_chat_id, message.id):
             return
 
         if cfg.forward_only_with_links and text and not has_urls(text):
@@ -144,7 +144,7 @@ async def run_forwarder(cfg: AppConfig, args: argparse.Namespace) -> None:
         else:
             await client.send_message(destination_chat_id, outbound_text)
 
-        await dedupe.mark_processed(source_chat_id, message.id)
+        await dedupe.mark_processed(event_source_chat_id, message.id)
         print(f"Forwarded message {message.id}")
 
         if args.once:
