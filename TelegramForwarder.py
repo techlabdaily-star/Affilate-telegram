@@ -1,14 +1,29 @@
 import asyncio
 import os
 import sys
+
+from dotenv import load_dotenv
+from telethon.sessions import StringSession
 from telethon.sync import TelegramClient
+
+
+load_dotenv()
+
 
 class TelegramForwarder:
     def __init__(self, api_id, api_hash, phone_number):
         self.api_id = api_id
         self.api_hash = api_hash
-        self.phone_number = phone_number
-        self.client = TelegramClient('session_' + phone_number + '_multi', api_id, api_hash)
+        self.phone_number = phone_number or ""
+
+        self.session_string = os.getenv("TELEGRAM_SESSION_STRING", "").strip()
+        default_session_name = "session_" + (self.phone_number or "default") + "_multi"
+        self.session_name = os.getenv("SESSION_NAME", "").strip() or default_session_name
+
+        if self.session_string:
+            self.client = TelegramClient(StringSession(self.session_string), api_id, api_hash)
+        else:
+            self.client = TelegramClient(self.session_name, api_id, api_hash)
 
     async def resolve_destination_entity(self, destination_target):
         target = destination_target.strip()
@@ -36,15 +51,20 @@ class TelegramForwarder:
     async def forward_messages_to_channel(self, source_chat_ids, destination_target):
         await self.client.connect()
 
-        # Ensure you're authorized
+        # Ensure the session is authorized before forwarding.
         if not await self.client.is_user_authorized():
             if not sys.stdin.isatty():
                 raise RuntimeError(
                     "Telegram session is not authorized in this environment. "
-                    "Run once locally to generate session files, then deploy with that session."
+                    "Set TELEGRAM_SESSION_STRING to a valid authorized session string, "
+                    "or run locally once to authorize SESSION_NAME and redeploy."
+                )
+            if not self.phone_number:
+                raise RuntimeError(
+                    "PHONE_NUMBER is required for interactive sign-in when no valid TELEGRAM_SESSION_STRING is provided."
                 )
             await self.client.send_code_request(self.phone_number)
-            await self.client.sign_in(self.phone_number, input('Enter the code: '))
+            await self.client.sign_in(self.phone_number, input("Enter the code: "))
 
         # Allow either a single source ID or multiple IDs.
         if isinstance(source_chat_ids, int):
@@ -65,46 +85,44 @@ class TelegramForwarder:
                 messages = await self.client.get_messages(
                     source_chat_id,
                     min_id=last_message_ids[source_chat_id],
-                    limit=None
+                    limit=None,
                 )
 
                 for message in reversed(messages):
-                    # Forward only normal content posts: text, links, media (image/video/document with caption).
+                    # Forward normal content posts: text, links, and media.
                     has_text = bool((message.raw_text or "").strip())
                     has_media = message.media is not None
                     if has_text or has_media:
                         await self.client.forward_messages(destination_entity, message, source_chat_id)
                         print(f"Message forwarded from {source_chat_id}")
 
-
                     # Update the last message ID for this source.
-                    last_message_ids[source_chat_id] = max(
-                        last_message_ids[source_chat_id],
-                        message.id
-                    )
+                    last_message_ids[source_chat_id] = max(last_message_ids[source_chat_id], message.id)
 
-            # Add a delay before checking for new messages again
-            await asyncio.sleep(5)  # Adjust the delay time as needed
+            # Add a delay before checking for new messages again.
+            await asyncio.sleep(5)
 
 
-# Function to read credentials from file
 def read_credentials():
     env_api_id = os.getenv("API_ID")
     env_api_hash = os.getenv("API_HASH")
     env_phone_number = os.getenv("PHONE_NUMBER")
-    if env_api_id and env_api_hash and env_phone_number:
+    has_string_session = bool(os.getenv("TELEGRAM_SESSION_STRING", "").strip())
+    if env_api_id and env_api_hash and (env_phone_number or has_string_session):
         return env_api_id, env_api_hash, env_phone_number
 
     try:
-        with open("credentials.txt", "r") as file:
+        with open("credentials.txt", "r", encoding="utf-8") as file:
             lines = file.readlines()
-            api_id = lines[0].strip()
-            api_hash = lines[1].strip()
-            phone_number = lines[2].strip()
-            return api_id, api_hash, phone_number
+            api_id = lines[0].strip() if len(lines) > 0 else None
+            api_hash = lines[1].strip() if len(lines) > 1 else None
+            phone_number = lines[2].strip() if len(lines) > 2 else ""
+            if api_id and api_hash and (phone_number or has_string_session):
+                return api_id, api_hash, phone_number
     except FileNotFoundError:
-        print("Credentials file not found.")
-        return None, None, None
+        pass
+
+    return None, None, None
 
 
 def parse_source_chat_ids(value):
@@ -118,29 +136,32 @@ def read_forwarding_config():
         return parse_source_chat_ids(source_env), destination_env.strip()
     return None, None
 
-# Function to write credentials to file
+
 def write_credentials(api_id, api_hash, phone_number):
-    with open("credentials.txt", "w") as file:
+    with open("credentials.txt", "w", encoding="utf-8") as file:
         file.write(api_id + "\n")
         file.write(api_hash + "\n")
         file.write(phone_number + "\n")
 
+
 async def main():
-    # Attempt to read credentials from file
     api_id, api_hash, phone_number = read_credentials()
 
-    # If credentials not found in file, prompt the user to input them
     if api_id is None or api_hash is None or phone_number is None:
+        has_string_session = bool(os.getenv("TELEGRAM_SESSION_STRING", "").strip())
         if not sys.stdin.isatty():
             raise RuntimeError(
-                "Missing credentials. Set API_ID, API_HASH and PHONE_NUMBER environment variables "
-                "for non-interactive deployments."
+                "Missing credentials. Set API_ID and API_HASH. "
+                "Also set PHONE_NUMBER (file sessions) or TELEGRAM_SESSION_STRING (recommended for deployments)."
             )
+
         api_id = input("Enter your API ID: ")
         api_hash = input("Enter your API Hash: ")
-        phone_number = input("Enter your phone number: ")
-        # Write credentials to file for future use
-        write_credentials(api_id, api_hash, phone_number)
+        if has_string_session:
+            phone_number = ""
+        else:
+            phone_number = input("Enter your phone number: ")
+            write_credentials(api_id, api_hash, phone_number)
 
     forwarder = TelegramForwarder(api_id, api_hash, phone_number)
 
@@ -158,7 +179,7 @@ async def main():
 
     await forwarder.forward_messages_to_channel(source_chat_ids, destination_target)
 
-# Start the event loop and run the main function
+
 if __name__ == "__main__":
     try:
         asyncio.run(main())

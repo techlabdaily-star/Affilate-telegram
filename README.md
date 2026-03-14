@@ -47,14 +47,18 @@ Set these environment variables in your deployment platform:
 ```env
 API_ID=123456
 API_HASH=your_api_hash
-PHONE_NUMBER=+911234567890
 SOURCE_CHAT_IDS=-1001422047391,-1001412868909
 DESTINATION_TARGET=2015117555
+TELEGRAM_SESSION_STRING=your_authorized_string_session
+# Optional when using file session instead of string session:
+# PHONE_NUMBER=+911234567890
+# SESSION_NAME=session_+91XXXXXXXXXX_multi
 ```
 
 Notes:
 - `Procfile` defines a worker process: `python TelegramForwarder.py`
-- If the session is not authorized, run once locally to create the session file, then deploy with that session.
+- `TELEGRAM_SESSION_STRING` is the recommended production auth method because `.session` files are usually git-ignored.
+- If you prefer file sessions, use a fixed `SESSION_NAME` and persist that session file in your host volume.
 
 ## Required Files
 
